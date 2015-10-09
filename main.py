@@ -26,6 +26,8 @@ def config_init():
 	ga = config['google_analytics']
 	global mp 
 	mp = config['mixpanel']
+	global gap
+	gap = config['google_analytics_properties']
 
 # Google Analytics Code
 def get_service(api_name, api_version, scope, key_file_location,
@@ -75,7 +77,7 @@ def get_view_counts(service):
 			property_names = []
 			# Hard-coding the names and indices for the different properties
 			for k, v in enumerate(properties.get('items')):
-				if properties.get('items')[k].get('name') in ('LaunchDarkly Marketing', 'Tech Docs LaunchDarkly', 'API Docs LaunchDarkly', 'LaunchDarkly blog'):
+				if properties.get('items')[k].get('name') in (gap['1'], gap['2'], gap['3'], gap['4']):
 					property = properties.get('items')[k].get('id')
 					property_list.append(property)
 					property_names.append(v.get('name'))
