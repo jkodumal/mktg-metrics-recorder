@@ -113,6 +113,16 @@ def get_results(service, profile_id):
 		metrics='ga:sessions',
 		dimensions='ga:medium').execute()
 
+def get_monthly_results(service, profile_id):
+	# Use the Analytics Service Object to query the Core Reporting API
+	# for the number of sessions within the past thirty days.
+	return service.data().ga().get(
+		ids='ga:' + profile_id,
+		start_date='30daysAgo',
+		end_date='today',
+		metrics='ga:sessions',
+		dimensions='ga:medium').execute()
+
 def google_analytics_main():
 	# Define the auth scopes to request.
 	scope = ['https://www.googleapis.com/auth/analytics.readonly']
@@ -127,18 +137,23 @@ def google_analytics_main():
 	combination = get_view_counts(service)
 	profiles = combination[0]
 	properties = combination[1]
+
 	global total_sessions 
 	global total_direct
 	global total_organic
 	global total_referral
 	global total_social
 	global total_other
+	global total_monthly
+
 	total_sessions= 0
 	total_direct = 0
 	total_organic = 0
 	total_referral = 0
 	total_social = 0
 	total_other = 0
+	total_monthly = 0
+
 	print "\nGoogle Analytics Sessions\n"
 	for index, profile in enumerate(profiles):
 		sessions = 0
@@ -148,6 +163,7 @@ def google_analytics_main():
 		social = 0
 		other = 0
 		results = get_results(service, profile)
+		monthly_results = get_monthly_results(service, profile)
 		print str(properties[index])
 
 		#Filter into each traffic source channel
@@ -155,19 +171,14 @@ def google_analytics_main():
 			source = item[0].lower()
 			if source == '(none)':
 				direct += int(item[1])
-				total_direct += int(item[1])
 			elif source == 'organic':
 				organic += int(item[1])
-				total_organic += int(item[1])
 			elif source == 'referral':
 				referral += int(item[1])
-				total_referral += int(item[1])
 			elif source == "social":
 				social += int(item[1])
-				total_social += int(item[1])
 			else:
 				other += int(item[1])
-				total_other += int(item[1])
 
 			sessions += int(item[1])
 
@@ -178,6 +189,23 @@ def google_analytics_main():
 		print "    Other including Email: " + str(other)
 		total_sessions += sessions
 		print "    Total:" + str(sessions) + "\n"
+
+		#Filter into each traffic source channel
+		for item in monthly_results.get('rows'):
+			source = item[0].lower()
+			if source == '(none)':
+				total_direct += int(item[1])
+			elif source == 'organic':
+				total_organic += int(item[1])
+			elif source == 'referral':
+				total_referral += int(item[1])
+			elif source == "social":
+				total_social += int(item[1])
+			else:
+				total_other += int(item[1])
+
+			total_monthly += int(item[1])
+
 	print "Total Direct: " + str(direct)
 	print "Total Organic: " + str(organic)
 	print "Total Referral: " + str(referral)
@@ -222,27 +250,32 @@ def mixpanel_main():
 	print "Members added: " + str(mp_members)
 	print "Created first feature: " + str(mp_features)
 
-def spreadsheet_recorder():
-	print 'Writing to "Metrics" spreadsheet...'
+def spreadsheet_auth():
 	json_key = json.load(open(gspr['OAUTH2JSONFILE']))
 	scope = ['https://spreadsheets.google.com/feeds']
 	credentials = SignedJwtAssertionCredentials(json_key['client_email'], json_key['private_key'], scope)
 	gs = gspread.authorize(credentials)
+	return gs
 
-	sheet_file = gs.open_by_url(gspr['SPREADSHEETURL'])
+def weekly_ss_recorder(client):
+	
+	print 'Writing to "Metrics > ' + gsw['3'] + '" spreadsheet...'
+	sheet_file = client.open_by_url(gspr['SPREADSHEETURL'])
 	ws = sheet_file.worksheet(gsw['3'])
-
-	# Hard-coded rows
-	row_values = ws.row_values(2)
+	row = ws.find("Date").row
+	row_values = ws.row_values(row)
 	column = len(row_values) + 1
 	today = date.today()
-	ws.update_cell(2, column, today)
-	ws.update_cell(3, column, total_sessions)
-	ws.update_cell(4, column, mp_signups)
-	ws.update_cell(5, column, mp_members)
-	ws.update_cell(6, column, mp_features)
-	print "Finished"
+	ws.update_cell(row, column, today)
+	ws.update_cell(row + 1, column, total_sessions)
+	ws.update_cell(row + 2, column, mp_signups)
+	ws.update_cell(row + 3, column, mp_members)
+	ws.update_cell(row + 4, column, mp_features)
 
+def monthly_ss_recorder(client):
+
+	print 'Writing to "Metrics > ' + gsw['1'] + '" spreadsheet...'
+	sheet_file = client.open_by_url(gspr['SPREADSHEETURL'])
 	ws2 = sheet_file.worksheet(gsw['1'])
 	start_row = ws2.find("Direct").row
 	column = len(ws2.row_values(start_row)) + 1
@@ -251,7 +284,7 @@ def spreadsheet_recorder():
 	ws2.update_cell(start_row + 2, column, total_organic)
 	ws2.update_cell(start_row + 3, column, total_social)
 	ws2.update_cell(start_row + 4, column, total_other)
-	ws2.update_cell(start_row + 5, column, total_sessions)
+	ws2.update_cell(start_row + 5, column, total_monthly)
 
 
 def main():
@@ -259,7 +292,12 @@ def main():
 	mixpanel_main()
 	github_main()
 	google_analytics_main()
-	spreadsheet_recorder()
+	if (date.isoweekday(date.today()) == 7) or (date.isoweekday(date.today()) == 1):
+		client = spreadsheet_auth()
+		weekly_ss_recorder(client)
+	if (date.today().day == 1):
+		client = spreadsheet_auth()
+		monthly_ss_recorder(client)
 
 if __name__ == '__main__':
   main()
