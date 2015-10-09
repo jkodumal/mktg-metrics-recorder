@@ -1,0 +1,9 @@
+*.properties
+*.ini
+*.p12
+*.pyc
+/include/
+/lib/
+/bin/
+*.json
+.Python
