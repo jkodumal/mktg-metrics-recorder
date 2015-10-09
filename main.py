@@ -11,7 +11,7 @@ from oauth2client import tools
 from github import Github
 from mixpanel import Mixpanel
 
-from datetime import datetime
+from datetime import datetime, date
 import calendar
 
 import json
@@ -127,7 +127,13 @@ def google_analytics_main():
 	combination = get_view_counts(service)
 	profiles = combination[0]
 	properties = combination[1]
-	total_sessions = 0
+	global total_sessions 
+	global total_direct
+	global total_organic
+	global total_referral
+	global total_social
+	global total_other
+	total_sessions= 0
 	total_direct = 0
 	total_organic = 0
 	total_referral = 0
@@ -182,6 +188,8 @@ def google_analytics_main():
 def github_main():
 	g = Github(gh['TOKEN'])
 
+	global stargazers
+	global forks
 	stargazers = 0
 	forks = 0
 
@@ -204,20 +212,46 @@ def mixpanel_main():
 	date = data['data']['series'][0]
 	print "Metrics for the week ending " + date + "\n"
 	print "Mixpanel\n"
-	print "Signups: " + str(data['data']['values']['signup'][date])
-	print "Members added: " + str(data['data']['values']['add_member'][date])
-	print "Created first feature: " + str(data['data']['values']['create_feature'][date])
+	global mp_signups
+	global mp_members
+	global mp_features
+	mp_signups = data['data']['values']['signup'][date]
+	mp_members = data['data']['values']['add_member'][date]
+	mp_features = data['data']['values']['create_feature'][date]
+	print "Signups: " + str(mp_signups)
+	print "Members added: " + str(mp_members)
+	print "Created first feature: " + str(mp_features)
 
-# def spreadsheet_recorder():
-# 	json_key = json.load(open(gspr['OAUTH2JSONFILE']))
-# 	scope = ['https://spreadsheets.google.com/feeds']
-# 	credentials = SignedJwtAssertionCredentials(json_key['client_email'], json_key['private_key'], scope)
-# 	gs = gspread.authorize(credentials)
+def spreadsheet_recorder():
+	print 'Writing to "Metrics" spreadsheet...'
+	json_key = json.load(open(gspr['OAUTH2JSONFILE']))
+	scope = ['https://spreadsheets.google.com/feeds']
+	credentials = SignedJwtAssertionCredentials(json_key['client_email'], json_key['private_key'], scope)
+	gs = gspread.authorize(credentials)
 
-# 	sheet_file = gs.open_by_key(gspr['SPREADSHEETKEY'])
-# 	worksheet = sheet_file.worksheet(gsw['3'])
-# 	row_values = worksheet.row_values(2)
-# 	print row_values
+	sheet_file = gs.open_by_url(gspr['SPREADSHEETURL'])
+	ws = sheet_file.worksheet(gsw['3'])
+
+	# Hard-coded rows
+	row_values = ws.row_values(2)
+	column = len(row_values) + 1
+	today = date.today()
+	ws.update_cell(2, column, today)
+	ws.update_cell(3, column, total_sessions)
+	ws.update_cell(4, column, mp_signups)
+	ws.update_cell(5, column, mp_members)
+	ws.update_cell(6, column, mp_features)
+	print "Finished"
+
+	ws2 = sheet_file.worksheet(gsw['1'])
+	start_row = ws2.find("Direct").row
+	column = len(ws2.row_values(start_row)) + 1
+	ws2.update_cell(start_row, column, total_direct)
+	ws2.update_cell(start_row + 1, column, total_referral)
+	ws2.update_cell(start_row + 2, column, total_organic)
+	ws2.update_cell(start_row + 3, column, total_social)
+	ws2.update_cell(start_row + 4, column, total_other)
+	ws2.update_cell(start_row + 5, column, total_sessions)
 
 
 def main():
@@ -225,7 +259,7 @@ def main():
 	mixpanel_main()
 	github_main()
 	google_analytics_main()
-	# spreadsheet_recorder()
+	spreadsheet_recorder()
 
 if __name__ == '__main__':
   main()
