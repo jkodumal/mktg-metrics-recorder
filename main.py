@@ -14,6 +14,9 @@ from mixpanel import Mixpanel
 from datetime import datetime
 import calendar
 
+import json
+import gspread
+
 # Using config file
 def config_init():
 	config = configparser.ConfigParser()
@@ -28,6 +31,10 @@ def config_init():
 	mp = config['mixpanel']
 	global gap
 	gap = config['google_analytics_properties']
+	global gspr
+	gspr = config['google_spreadsheets']
+	global gsw
+	gsw = config['google_spreadsheets_worksheets']
 
 # Google Analytics Code
 def get_service(api_name, api_version, scope, key_file_location,
@@ -103,7 +110,8 @@ def get_results(service, profile_id):
 		ids='ga:' + profile_id,
 		start_date='7daysAgo',
 		end_date='today',
-		metrics='ga:sessions').execute()
+		metrics='ga:sessions',
+		dimensions='ga:medium').execute()
 
 def google_analytics_main():
 	# Define the auth scopes to request.
@@ -120,13 +128,41 @@ def google_analytics_main():
 	profiles = combination[0]
 	properties = combination[1]
 	total_sessions = 0
-	print "\nGoogle Analytics Data\n"
+	print "\nGoogle Analytics Sessions\n"
 	for index, profile in enumerate(profiles):
+		sessions = 0
+		direct = 0
+		organic = 0
+		referral = 0
+		social = 0
+		other = 0
 		results = get_results(service, profile)
-		sessions = int(results.get('rows')[0][0])
+		print str(properties[index])
+
+		#Filter into each traffic source channel
+		for item in results.get('rows'):
+			source = item[0].lower()
+			if source == '(none)':
+				direct += int(item[1])
+			elif source == 'organic':
+				organic += int(item[1])
+			elif source == 'referral':
+				referral += int(item[1])
+			elif source == "social":
+				social += int(item[1])
+			else:
+				other += int(item[1])
+
+			sessions += int(item[1])
+
+		print "    Direct: " + str(direct)
+		print "    Organic: " + str(organic)
+		print "    Referral: " + str(referral)
+		print "    Social: " + str(social)
+		print "    Other including Email: " + str(other)
 		total_sessions += sessions
-		print "Sessions from " + str(properties[index]) + ": " + str(sessions)
-	print "Total Sessions: " + str(total_sessions)
+		print "    Total:" + str(sessions) + "\n"
+	print "Total Google Analytics Sessions: " + str(total_sessions)
 
 def github_main():
 	g = Github(gh['TOKEN'])
@@ -157,11 +193,24 @@ def mixpanel_main():
 	print "Members added: " + str(data['data']['values']['add_member'][date])
 	print "Created first feature: " + str(data['data']['values']['create_feature'][date])
 
+# def spreadsheet_recorder():
+# 	json_key = json.load(open(gspr['OAUTH2JSONFILE']))
+# 	scope = ['https://spreadsheets.google.com/feeds']
+# 	credentials = SignedJwtAssertionCredentials(json_key['client_email'], json_key['private_key'], scope)
+# 	gs = gspread.authorize(credentials)
+
+# 	sheet_file = gs.open_by_key(gspr['SPREADSHEETKEY'])
+# 	worksheet = sheet_file.worksheet(gsw['3'])
+# 	row_values = worksheet.row_values(2)
+# 	print row_values
+
+
 def main():
 	config_init()
 	mixpanel_main()
 	github_main()
 	google_analytics_main()
+	# spreadsheet_recorder()
 
 if __name__ == '__main__':
   main()
