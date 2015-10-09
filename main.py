@@ -128,6 +128,11 @@ def google_analytics_main():
 	profiles = combination[0]
 	properties = combination[1]
 	total_sessions = 0
+	total_direct = 0
+	total_organic = 0
+	total_referral = 0
+	total_social = 0
+	total_other = 0
 	print "\nGoogle Analytics Sessions\n"
 	for index, profile in enumerate(profiles):
 		sessions = 0
@@ -144,14 +149,19 @@ def google_analytics_main():
 			source = item[0].lower()
 			if source == '(none)':
 				direct += int(item[1])
+				total_direct += int(item[1])
 			elif source == 'organic':
 				organic += int(item[1])
+				total_organic += int(item[1])
 			elif source == 'referral':
 				referral += int(item[1])
+				total_referral += int(item[1])
 			elif source == "social":
 				social += int(item[1])
+				total_social += int(item[1])
 			else:
 				other += int(item[1])
+				total_other += int(item[1])
 
 			sessions += int(item[1])
 
@@ -162,6 +172,11 @@ def google_analytics_main():
 		print "    Other including Email: " + str(other)
 		total_sessions += sessions
 		print "    Total:" + str(sessions) + "\n"
+	print "Total Direct: " + str(direct)
+	print "Total Organic: " + str(organic)
+	print "Total Referral: " + str(referral)
+	print "Total Social: " + str(social)
+	print "Total Other including Email: " + str(other)
 	print "Total Google Analytics Sessions: " + str(total_sessions)
 
 def github_main():
