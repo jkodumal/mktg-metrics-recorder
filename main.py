@@ -234,11 +234,11 @@ def mixpanel_main():
 	data = api_client.request(['events'], {
         'event' : ['create_feature', 'signup', 'add_member'],
         'unit' : 'week',
-        'interval' : 1,
+        'interval' : 2,
         'type': 'general'
     })
 	date = data['data']['series'][0]
-	print "Metrics for the week ending " + date + "\n"
+	print "Metrics for the week\n"
 	print "Mixpanel\n"
 	global mp_signups
 	global mp_members
@@ -288,9 +288,11 @@ def monthly_ss_recorder(client):
 
 
 def main():
+
+	# Default returns information from the last week
 	config_init()
 	mixpanel_main()
-	github_main()
+	github_main() # Github information doesn't change week to week
 	google_analytics_main()
 	if (date.isoweekday(date.today()) == 7) or (date.isoweekday(date.today()) == 1):
 		client = spreadsheet_auth()
