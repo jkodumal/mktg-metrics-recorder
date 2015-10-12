@@ -17,6 +17,8 @@ import calendar
 import json
 import gspread
 
+from birdy.twitter import AppClient
+
 # Using config file
 def config_init():
 	config = configparser.ConfigParser()
@@ -24,17 +26,36 @@ def config_init():
 	config.read('config.ini')
 
 	global gh 
-	gh = config['github.com']
-	global ga 
-	ga = config['google_analytics']
+	global ga
 	global mp 
-	mp = config['mixpanel']
 	global gap
-	gap = config['google_analytics_properties']
 	global gspr
-	gspr = config['google_spreadsheets']
 	global gsw
+	global tw
+
+	gh = config['github.com']
+	ga = config['google_analytics']
+	mp = config['mixpanel']
+	gap = config['google_analytics_properties']
+	gspr = config['google_spreadsheets']
 	gsw = config['google_spreadsheets_worksheets']
+	tw = config['twitter.com']
+
+def github_main():
+	g = Github(gh['TOKEN'])
+
+	global stargazers
+	global forks
+	stargazers = 0
+	forks = 0
+
+	for repo in g.get_organization('launchdarkly').get_repos(type='public'):
+		stargazers += repo.stargazers_count
+		forks += repo.forks_count
+
+	print "\nGithub Data\n"
+	print "GitHub Stargazers:", stargazers
+	print "GitHub Forks:", forks
 
 # Google Analytics Code
 def get_service(api_name, api_version, scope, key_file_location,
@@ -212,22 +233,6 @@ def google_analytics_main():
 	print "Total Social: " + str(social)
 	print "Total Other including Email: " + str(other)
 	print "Total Google Analytics Sessions: " + str(total_sessions)
-
-def github_main():
-	g = Github(gh['TOKEN'])
-
-	global stargazers
-	global forks
-	stargazers = 0
-	forks = 0
-
-	for repo in g.get_organization('launchdarkly').get_repos(type='public'):
-		stargazers += repo.stargazers_count
-		forks += repo.forks_count
-
-	print "\nGithub Data\n"
-	print "GitHub Stargazers:", stargazers
-	print "GitHub Forks:", forks
 	
 def mixpanel_main():
 	api_client = Mixpanel(mp['APIKEY'], mp['APISECRET'])
@@ -249,6 +254,16 @@ def mixpanel_main():
 	print "Signups: " + str(mp_signups)
 	print "Members added: " + str(mp_members)
 	print "Created first feature: " + str(mp_features)
+
+def twitter_main():
+	client = AppClient(tw['APIKEY'],tw['APISECRET'])
+	access_token = client.get_access_token()
+	response = client.api.users.show.get(screen_name = 'LaunchDarkly')
+
+	global twitter_followers_count
+	twitter_followers_count = response.data.followers_count
+	print "\nTwitter\n"
+	print "Followers: " + str(twitter_followers_count)
 
 def spreadsheet_auth():
 	json_key = json.load(open(gspr['OAUTH2JSONFILE']))
@@ -285,13 +300,26 @@ def monthly_ss_recorder(client):
 	ws2.update_cell(start_row + 3, column, total_social)
 	ws2.update_cell(start_row + 4, column, total_other)
 	ws2.update_cell(start_row + 5, column, total_monthly)
-
+	print 'Moving to "Metrics > ' + gsw['2'] + '" ...'
+	
+	ws3 = sheet_file.worksheet(gsw['2'])
+	date_row = ws3.find("Date").row
+	date_column = len(ws3.row_values(date_row)) + 1
+	ws3.update_cell(date_row, date_column, date.today())
+	tw_row = ws3.find("Twitter followers").row
+	tw_column = len(ws3.row_values(tw_row)) + 1
+	ws3.update_cell(tw_row, tw_column, twitter_followers_count)
+	gh_row = ws3.find("Github stargazers").row
+	gh_column = len(ws3.row_values(gh_row)) + 1
+	ws3.update_cell(gh_row, gh_column, stargazers)
+	ws3.update_cell(gh_row + 1, gh_column, forks)
 
 def main():
 
 	# Default returns information from the last week
 	config_init()
 	mixpanel_main()
+	twitter_main() # Twitter information doesn't change week to week
 	github_main() # Github information doesn't change week to week
 	google_analytics_main()
 	if (date.isoweekday(date.today()) == 7) or (date.isoweekday(date.today()) == 1):
