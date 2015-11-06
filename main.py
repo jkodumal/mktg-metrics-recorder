@@ -137,12 +137,34 @@ def get_results(service, profile_id):
 def get_monthly_results(service, profile_id):
 	# Use the Analytics Service Object to query the Core Reporting API
 	# for the number of sessions within the past thirty days.
-	return service.data().ga().get(
-		ids='ga:' + profile_id,
-		start_date='30daysAgo',
-		end_date='today',
-		metrics='ga:sessions',
-		dimensions='ga:medium').execute()
+	if date.today().month in ("1", "5", "7", "8", "10", "12"):
+		return service.data().ga().get(
+			ids='ga:' + profile_id,
+			start_date='31daysAgo',
+			end_date='yesterday',
+			metrics='ga:sessions',
+			dimensions='ga:medium').execute()
+	elif date.today().month == "3" and (date.today().year % 4 != 0):
+		return service.data().ga().get(
+			ids='ga:' + profile_id,
+			start_date='29daysAgo',
+			end_date='yesterday',
+			metrics='ga:sessions',
+			dimensions='ga:medium').execute()
+	elif date.today().month == "3" and (date.today().year % 4 == 0):
+		return service.data().ga().get(
+			ids='ga:' + profile_id,
+			start_date='30daysAgo',
+			end_date='yesterday',
+			metrics='ga:sessions',
+			dimensions='ga:medium').execute()
+	else:
+		return service.data().ga().get(
+			ids='ga:' + profile_id,
+			start_date='32daysAgo',
+			end_date='yesterday',
+			metrics='ga:sessions',
+			dimensions='ga:medium').execute()
 
 def google_analytics_main():
 	# Define the auth scopes to request.
@@ -159,7 +181,6 @@ def google_analytics_main():
 	profiles = combination[0]
 	properties = combination[1]
 
-	global total_sessions 
 	global total_direct
 	global total_organic
 	global total_referral
@@ -167,7 +188,6 @@ def google_analytics_main():
 	global total_other
 	global total_monthly
 
-	total_sessions= 0
 	total_direct = 0
 	total_organic = 0
 	total_referral = 0
@@ -175,14 +195,21 @@ def google_analytics_main():
 	total_other = 0
 	total_monthly = 0
 
+	weekly_sessions = 0
+	weekly_direct = 0
+	weekly_organic = 0
+	weekly_referral = 0
+	weekly_social = 0
+	weekly_other = 0
+
 	print "\nGoogle Analytics Sessions\n"
 	for index, profile in enumerate(profiles):
-		sessions = 0
-		direct = 0
-		organic = 0
-		referral = 0
-		social = 0
-		other = 0
+		local_sessions = 0
+		local_direct = 0
+		local_organic = 0
+		local_referral = 0
+		local_social = 0
+		local_other = 0
 		results = get_results(service, profile)
 		monthly_results = get_monthly_results(service, profile)
 		print str(properties[index])
@@ -191,25 +218,30 @@ def google_analytics_main():
 		for item in results.get('rows'):
 			source = item[0].lower()
 			if source == '(none)':
-				direct += int(item[1])
+				local_direct += int(item[1])
+				weekly_direct += int(item[1])
 			elif source == 'organic':
-				organic += int(item[1])
+				local_organic += int(item[1])
+				weekly_organic += int(item[1])
 			elif source == 'referral':
-				referral += int(item[1])
+				local_referral += int(item[1])
+				weekly_referral += int(item[1])
 			elif source == "social":
-				social += int(item[1])
+				local_social += int(item[1])
+				weekly_social += int(item[1])
 			else:
-				other += int(item[1])
+				local_other += int(item[1])
+				weekly_other += int(item[1])
 
-			sessions += int(item[1])
+			local_sessions += int(item[1])
+			weekly_sessions += int(item[1])
 
-		print "    Direct: " + str(direct)
-		print "    Organic: " + str(organic)
-		print "    Referral: " + str(referral)
-		print "    Social: " + str(social)
-		print "    Other including Email: " + str(other)
-		total_sessions += sessions
-		print "    Total:" + str(sessions) + "\n"
+		print "    Direct: " + str(local_direct)
+		print "    Organic: " + str(local_organic)
+		print "    Referral: " + str(local_referral)
+		print "    Social: " + str(local_social)
+		print "    Other including Email: " + str(local_other)
+		print "    Total: " + str(local_sessions) + "\n"
 
 		#Filter into each traffic source channel
 		for item in monthly_results.get('rows'):
@@ -227,12 +259,12 @@ def google_analytics_main():
 
 			total_monthly += int(item[1])
 
-	print "Total Direct: " + str(direct)
-	print "Total Organic: " + str(organic)
-	print "Total Referral: " + str(referral)
-	print "Total Social: " + str(social)
-	print "Total Other including Email: " + str(other)
-	print "Total Google Analytics Sessions: " + str(total_sessions)
+	print "Total Direct: " + str(weekly_direct)
+	print "Total Organic: " + str(weekly_organic)
+	print "Total Referral: " + str(weekly_referral)
+	print "Total Social: " + str(weekly_social)
+	print "Total Other including Email: " + str(weekly_other)
+	print "Total Google Analytics Sessions: " + str(weekly_sessions)
 	
 def mixpanel_main():
 	api_client = Mixpanel(mp['APIKEY'], mp['APISECRET'])
@@ -286,6 +318,7 @@ def weekly_ss_recorder(client):
 	ws.update_cell(row + 2, column, mp_signups)
 	ws.update_cell(row + 3, column, mp_members)
 	ws.update_cell(row + 4, column, mp_features)
+	print 'Finished'
 
 def monthly_ss_recorder(client):
 
@@ -302,6 +335,7 @@ def monthly_ss_recorder(client):
 	ws2.update_cell(start_row + 5, column, total_monthly)
 	print 'Moving to "Metrics > ' + gsw['2'] + '" ...'
 	
+	print 'Writing to "Metrics > ' + gsw['2'] + '" spreadsheet...'
 	ws3 = sheet_file.worksheet(gsw['2'])
 	date_row = ws3.find("Date").row
 	date_column = len(ws3.row_values(date_row)) + 1
@@ -313,6 +347,7 @@ def monthly_ss_recorder(client):
 	gh_column = len(ws3.row_values(gh_row)) + 1
 	ws3.update_cell(gh_row, gh_column, stargazers)
 	ws3.update_cell(gh_row + 1, gh_column, forks)
+	print 'Finished'
 
 def main():
 
