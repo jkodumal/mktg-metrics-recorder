@@ -181,6 +181,7 @@ def google_analytics_main():
 	profiles = combination[0]
 	properties = combination[1]
 
+	global weekly_sessions
 	global total_direct
 	global total_organic
 	global total_referral
@@ -314,7 +315,7 @@ def weekly_ss_recorder(client):
 	column = len(row_values) + 1
 	today = date.today()
 	ws.update_cell(row, column, today)
-	ws.update_cell(row + 1, column, total_sessions)
+	ws.update_cell(row + 1, column, weekly_sessions)
 	ws.update_cell(row + 2, column, mp_signups)
 	ws.update_cell(row + 3, column, mp_members)
 	ws.update_cell(row + 4, column, mp_features)
