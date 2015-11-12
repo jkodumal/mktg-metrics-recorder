@@ -7,9 +7,9 @@ Retrieve data from marketing sources and create a central place from which all A
 ## How to use ##
 
  - Install Python (use Python 2.X.X)
- - Install the virtualenv package using `$ [sudo] pip install virtualenv`
- - Run `$ pip install -r requirements.txt` to download and install all dependencies:
- - Run `$ source bin/activate` to initialize virtualenv
+ - Install the virtualenv package using `[sudo] pip install virtualenv`
+ - Run `pip install -r requirements.txt` to download and install all dependencies:
+ - Run `source bin/activate` to initialize virtualenv
  - Once the environment is activated, set up your config.ini file (use the example file to guide you) and run `python main.py`
 
 ## Supported metrics ##

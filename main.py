@@ -132,39 +132,39 @@ def get_results(service, profile_id):
 		start_date='7daysAgo',
 		end_date='today',
 		metrics='ga:sessions',
-		dimensions='ga:medium').execute()
+		dimensions='ga:channelGrouping').execute()
 
 def get_monthly_results(service, profile_id):
 	# Use the Analytics Service Object to query the Core Reporting API
-	# for the number of sessions within the past thirty days.
+	# for the number of sessions within the past month (adjusted for different days and leap years).
 	if date.today().month in ("1", "5", "7", "8", "10", "12"):
 		return service.data().ga().get(
 			ids='ga:' + profile_id,
 			start_date='31daysAgo',
 			end_date='yesterday',
 			metrics='ga:sessions',
-			dimensions='ga:medium').execute()
+			dimensions='ga:channelGrouping').execute()
 	elif date.today().month == "3" and (date.today().year % 4 != 0):
 		return service.data().ga().get(
 			ids='ga:' + profile_id,
 			start_date='29daysAgo',
 			end_date='yesterday',
 			metrics='ga:sessions',
-			dimensions='ga:medium').execute()
+			dimensions='ga:channelGrouping').execute()
 	elif date.today().month == "3" and (date.today().year % 4 == 0):
 		return service.data().ga().get(
 			ids='ga:' + profile_id,
 			start_date='30daysAgo',
 			end_date='yesterday',
 			metrics='ga:sessions',
-			dimensions='ga:medium').execute()
+			dimensions='ga:channelGrouping').execute()
 	else:
 		return service.data().ga().get(
 			ids='ga:' + profile_id,
 			start_date='32daysAgo',
 			end_date='yesterday',
 			metrics='ga:sessions',
-			dimensions='ga:medium').execute()
+			dimensions='ga:channelGrouping').execute()
 
 def google_analytics_main():
 	# Define the auth scopes to request.
@@ -218,10 +218,10 @@ def google_analytics_main():
 		#Filter into each traffic source channel
 		for item in results.get('rows'):
 			source = item[0].lower()
-			if source == '(none)':
+			if source == 'direct':
 				local_direct += int(item[1])
 				weekly_direct += int(item[1])
-			elif source == 'organic':
+			elif source == 'organic search':
 				local_organic += int(item[1])
 				weekly_organic += int(item[1])
 			elif source == 'referral':
@@ -247,9 +247,9 @@ def google_analytics_main():
 		#Filter into each traffic source channel
 		for item in monthly_results.get('rows'):
 			source = item[0].lower()
-			if source == '(none)':
+			if source == 'direct':
 				total_direct += int(item[1])
-			elif source == 'organic':
+			elif source == 'organic search':
 				total_organic += int(item[1])
 			elif source == 'referral':
 				total_referral += int(item[1])
