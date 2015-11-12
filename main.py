@@ -23,6 +23,8 @@ import gspread
 
 from birdy.twitter import AppClient
 
+import facebook
+
 # Using config file
 def config_init():
 	config = configparser.ConfigParser()
@@ -38,6 +40,7 @@ def config_init():
 	global tw
 	global al
 	global kl
+	global fb
 
 	gh = config['github.com']
 	ga = config['google_analytics']
@@ -48,6 +51,7 @@ def config_init():
 	tw = config['twitter.com']
 	al = config['alexa.com']
 	kl = config['klout.com']
+	fb = config['facebook.com']
 
 def github_main():
 	g = Github(gh['TOKEN'])
@@ -319,6 +323,14 @@ def klout_main():
 	score = k.user.score(kloutId = klout_id).get('score')
 	print "\nKlout score: " + str(score)
 
+def facebook_main():
+	graph = facebook.GraphAPI(access_token = fb['TOKEN'])
+	page = graph.get_object(id = fb['PAGEID'])
+
+	global likes
+	likes = page['likes']
+	print "\nFacebook likes: " + str(likes)
+
 def spreadsheet_auth():
 	json_key = json.load(open(gspr['OAUTH2JSONFILE']))
 	scope = ['https://spreadsheets.google.com/feeds']
@@ -375,6 +387,9 @@ def monthly_ss_recorder(client):
 	kl_row = ws3.find("Klout Score (login with twitter)").row
 	kl_column = len(ws3.row_values(kl_row)) + 1
 	ws3.update_cell(kl_row, kl_column, score)
+	fb_row = ws3.find("Facebook likes").row
+	fb_column = len(ws3.row_values(fb_row)) + 1
+	ws3.update_cell(fb_row, fb_column, likes)
 	print 'Finished'
 
 def main():
@@ -384,6 +399,7 @@ def main():
 	mixpanel_main()
 	alexa_main()
 	klout_main()
+	facebook_main()
 	twitter_main() # Twitter information doesn't change week to week
 	github_main() # Github information doesn't change week to week
 	google_analytics_main()
