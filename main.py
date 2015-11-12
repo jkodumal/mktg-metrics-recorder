@@ -17,6 +17,7 @@ import calendar
 
 from bs4 import BeautifulSoup
 
+from klout import *
 import json
 import gspread
 
@@ -36,6 +37,7 @@ def config_init():
 	global gsw
 	global tw
 	global al
+	global kl
 
 	gh = config['github.com']
 	ga = config['google_analytics']
@@ -45,6 +47,7 @@ def config_init():
 	gsw = config['google_spreadsheets_worksheets']
 	tw = config['twitter.com']
 	al = config['alexa.com']
+	kl = config['klout.com']
 
 def github_main():
 	g = Github(gh['TOKEN'])
@@ -58,8 +61,7 @@ def github_main():
 		stargazers += repo.stargazers_count
 		forks += repo.forks_count
 
-	print "\nGithub Data\n"
-	print "GitHub Stargazers:", stargazers
+	print "\nGitHub Stargazers:", stargazers
 	print "GitHub Forks:", forks
 
 # Google Analytics Code
@@ -300,16 +302,22 @@ def twitter_main():
 
 	global twitter_followers_count
 	twitter_followers_count = response.data.followers_count
-	print "\nTwitter\n"
-	print "Followers: " + str(twitter_followers_count)
+	print "\nTwitter followers: " + str(twitter_followers_count)
 
 def alexa_main():
 	data = BeautifulSoup(urlopen('http://data.alexa.com/data?cli=10&dat=snbamz&url=' + al['URL']).read(), "html.parser")
 	
 	global rank
 	rank = data.popularity['text']
-	print "\nAlexa Web Information\n"
-	print "Rank: " + str(rank)
+	print "\nAlexa rank: " + str(rank)
+
+def klout_main():
+	k = Klout(kl['KEY'])
+	klout_id = k.identity.klout(screenName = kl['SCREENNAME']).get('id')
+
+	global score
+	score = k.user.score(kloutId = klout_id).get('score')
+	print "\nKlout score: " + str(score)
 
 def spreadsheet_auth():
 	json_key = json.load(open(gspr['OAUTH2JSONFILE']))
@@ -364,6 +372,9 @@ def monthly_ss_recorder(client):
 	al_row = ws3.find("Alexa rank for launchdarkly.com").row
 	al_column = len(ws3.row_values(al_row)) + 1
 	ws3.update_cell(al_row, al_column, rank)
+	kl_row = ws3.find("Klout Score (login with twitter)").row
+	kl_column = len(ws3.row_values(kl_row)) + 1
+	ws3.update_cell(kl_row, kl_column, score)
 	print 'Finished'
 
 def main():
@@ -372,6 +383,7 @@ def main():
 	config_init()
 	mixpanel_main()
 	alexa_main()
+	klout_main()
 	twitter_main() # Twitter information doesn't change week to week
 	github_main() # Github information doesn't change week to week
 	google_analytics_main()
