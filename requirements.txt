@@ -1,3 +1,4 @@
+beautifulsoup4==4.4.1
 birdy==0.2
 cffi==1.2.1
 configparser==3.3.0.post2

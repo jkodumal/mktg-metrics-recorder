@@ -4,6 +4,7 @@ from apiclient.discovery import build
 from oauth2client.client import SignedJwtAssertionCredentials
 
 import httplib2
+from urllib2 import urlopen
 from oauth2client import client
 from oauth2client import file
 from oauth2client import tools
@@ -13,6 +14,8 @@ from mixpanel import Mixpanel
 
 from datetime import datetime, date
 import calendar
+
+from bs4 import BeautifulSoup
 
 import json
 import gspread
@@ -32,6 +35,7 @@ def config_init():
 	global gspr
 	global gsw
 	global tw
+	global al
 
 	gh = config['github.com']
 	ga = config['google_analytics']
@@ -40,6 +44,7 @@ def config_init():
 	gspr = config['google_spreadsheets']
 	gsw = config['google_spreadsheets_worksheets']
 	tw = config['twitter.com']
+	al = config['alexa.com']
 
 def github_main():
 	g = Github(gh['TOKEN'])
@@ -298,6 +303,14 @@ def twitter_main():
 	print "\nTwitter\n"
 	print "Followers: " + str(twitter_followers_count)
 
+def alexa_main():
+	data = BeautifulSoup(urlopen('http://data.alexa.com/data?cli=10&dat=snbamz&url=' + al['URL']).read(), "html.parser")
+	
+	global rank
+	rank = data.popularity['text']
+	print "\nAlexa Web Information\n"
+	print "Rank: " + str(rank)
+
 def spreadsheet_auth():
 	json_key = json.load(open(gspr['OAUTH2JSONFILE']))
 	scope = ['https://spreadsheets.google.com/feeds']
@@ -348,6 +361,9 @@ def monthly_ss_recorder(client):
 	gh_column = len(ws3.row_values(gh_row)) + 1
 	ws3.update_cell(gh_row, gh_column, stargazers)
 	ws3.update_cell(gh_row + 1, gh_column, forks)
+	al_row = ws3.find("Alexa rank for launchdarkly.com").row
+	al_column = len(ws3.row_values(al_row)) + 1
+	ws3.update_cell(al_row, al_column, rank)
 	print 'Finished'
 
 def main():
@@ -355,6 +371,7 @@ def main():
 	# Default returns information from the last week
 	config_init()
 	mixpanel_main()
+	alexa_main()
 	twitter_main() # Twitter information doesn't change week to week
 	github_main() # Github information doesn't change week to week
 	google_analytics_main()
