@@ -369,7 +369,7 @@ def monthly_ss_recorder(client):
 	gh_column = len(ws3.row_values(gh_row)) + 1
 	ws3.update_cell(gh_row, gh_column, stargazers)
 	ws3.update_cell(gh_row + 1, gh_column, forks)
-	al_row = ws3.find("Alexa rank for launchdarkly.com").row
+	al_row = ws3.find("Alexa rank").row
 	al_column = len(ws3.row_values(al_row)) + 1
 	ws3.update_cell(al_row, al_column, rank)
 	kl_row = ws3.find("Klout Score (login with twitter)").row
